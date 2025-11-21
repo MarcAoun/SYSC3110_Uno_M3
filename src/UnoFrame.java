@@ -203,7 +203,7 @@ public class UnoFrame implements UnoView {
         return colourSelected;
     }
 
-    public String colourSelectionDialogFlip() {
+    public String colourSelectionDialogDark() {
         String[] colours = {"TEAL", "PURPLE", "PINK", "ORANGE"};
         String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
         return colourSelected;

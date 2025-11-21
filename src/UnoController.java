@@ -189,6 +189,17 @@ public class UnoController implements ActionListener {
 
                 }
 
+                else if(cardPicked.getValueDark().equals(UnoModel.ValuesDark.WILD)) {
+                    String colour = frame.colourSelectionDialogDark(); // Choose new colour
+                    if(colour != null) {
+                        model.wildDark(UnoModel.ColoursDark.valueOf(colour));
+                    }
+                    view.updateHandPanel(model, this);
+                    frame.disableCards();
+                    isAdvanced = false;
+                    view.updateStatusMessage("New colour chosen, " + colour + ".");
+                }
+
                 // Regular card played
                 else {
                     view.updateHandPanel(model, this);

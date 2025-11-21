@@ -194,6 +194,11 @@ public class UnoModel {
         notifyViews();
     }
 
+    public void wildDark(ColoursDark newColour) {
+        topCard.setColourDark(newColour);
+        notifyViews();
+    }
+
     //------------------------------------------//
 
     /**
