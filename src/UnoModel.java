@@ -17,23 +17,41 @@ import java.util.*;
  */
 
 public class UnoModel {
-    /** Available card colours. Wilds use null colour. */
+    /** Available light card colours. Wilds use null colour. */
     public enum Colours {RED, YELLOW, GREEN, BLUE}
+
+    /** Available dark card colours. Wilds use null colour. */
+    public enum ColoursDark {ORANGE, PINK, PURPLE, TEAL}
+
     /** Available card values, including action/wild cards. */
-    public enum Values {ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, DRAW_ONE, REVERSE, SKIP, WILD, WILD_DRAW_TWO}
+    public enum Values {ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, DRAW_ONE, REVERSE, SKIP, WILD, WILD_DRAW_TWO, FLIP}
+
+    /** Available card values for dark side. */
+    public enum ValuesDark {ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, FLIP, DRAW_FIVE, SKIP_ALL, WILD}
+
+    /** What side the deck is being played on. */
+    public enum Side {LIGHT, DARK};
 
     // Players in turn order (clockwise or counterclockwise based on 'direction').
     private final List<Player> players = new ArrayList<>();
+
     // Index of the current player within 'players'.
     private int currPlayerIndex = 0;
+
     // Turn direction: +1 for clockwise, -1 for counterclockwise.
     int direction = 1;
+
     // The card currently on top of the discard pile (sets legal-play constraints).
     private Card topCard;
+
     // Cumulative (match) scores per player name.
     private final Map<String, Integer> finalScores = new HashMap<>();
+
     // Registered views to be notified on model changes.
     private final List<UnoView> views = new ArrayList<>();
+
+    //Holds the current side
+    private Side side = Side.LIGHT;
 
     /**
      * Generates a random card. In this milestone, there is no physical deck;
@@ -43,16 +61,26 @@ public class UnoModel {
     public Card getRandomCard() {
         Random rand = new Random();
 
-        Values[] values = Values.values();
-        Values value = values[rand.nextInt(values.length)];
+        Values[] valuesLight = Values.values();
+        Values valueLight = valuesLight[rand.nextInt(valuesLight.length)];
 
-        Colours colour = null;
+        Colours colourLight = null;
         // Wilds have no colour until set; all other cards need a colour.
-        if (value != Values.WILD && value != Values.WILD_DRAW_TWO) {
-            Colours[] colours = Colours.values();
-            colour = colours[rand.nextInt(colours.length)];
+        if (valueLight != Values.WILD && valueLight != Values.WILD_DRAW_TWO) {
+            Colours[] coloursLight = Colours.values();
+            colourLight = coloursLight[rand.nextInt(coloursLight.length)];
         }
-        return new Card(colour, value);
+
+        ValuesDark[] valuesDark = ValuesDark.values();
+        ValuesDark valueDark = valuesDark[rand.nextInt(valuesDark.length)];
+
+        ColoursDark colourDark = null;
+        if(valueDark != ValuesDark.WILD) {
+            ColoursDark[] coloursDark = ColoursDark.values();
+            colourDark = coloursDark[rand.nextInt(coloursDark.length)];
+        }
+
+        return new Card(colourLight, valueLight, colourDark, valueDark);
     }
 
     /**
@@ -65,6 +93,8 @@ public class UnoModel {
         topCard = card;
         notifyViews();
     }
+
+    //--------------- ACTION CARDS ----------------//
 
     /**
      * Current player draws one random card.
@@ -137,6 +167,27 @@ public class UnoModel {
         return drawnCards;
     }
 
+    public void flip() {
+        if(side == Side.DARK) {
+            side = Side.LIGHT;
+        } else {
+            side = Side.DARK;
+        }
+
+        notifyViews();
+    }
+
+    public void drawFive() {
+
+    }
+
+
+    public void skipAll() {
+
+    }
+
+    //------------------------------------------//
+
     /**
      * Starts a new round:
      * - Clears each player's hand and deals 7 random cards.
@@ -174,7 +225,6 @@ public class UnoModel {
             List<Card> deck = player.getPersonalDeck();
             for (Card card : deck) {
                 switch (card.getValue()) {
-                    case ZERO -> score += 0;
                     case ONE -> score += 1;
                     case TWO -> score += 2;
                     case THREE -> score += 3;
@@ -278,6 +328,10 @@ public class UnoModel {
      */
     public boolean isDeckEmpty() {
         return getCurrPlayer().getPersonalDeck().isEmpty();
+    }
+
+    public Side getSide() {
+        return side;
     }
 
     /**

@@ -6,22 +6,36 @@
 public class Card {
     private UnoModel.Colours colour;             // can be reassigned for wilds via wild()/wildDrawTwo()
     private final UnoModel.Values value;
+    private UnoModel.ColoursDark colourDark;
+    private final UnoModel.ValuesDark valueDark;
 
     /**
      * Creates a card with the given colour and value.
      * For wilds, pass null for colour.
      */
-    public Card(UnoModel.Colours colour, UnoModel.Values value) {
+    public Card(UnoModel.Colours colour, UnoModel.Values value, UnoModel.ColoursDark colourDark, UnoModel.ValuesDark valueDark) {
         this.colour = colour;
         this.value = value;
+        this.colourDark = colourDark;
+        this.valueDark = valueDark;
     }
 
     /** @return current colour; may be null for wilds until chosen */
-    public UnoModel.Colours getColour() { return colour; }
+    public UnoModel.Colours getColour() {
+        return colour;
+    }
+
+    public UnoModel.ColoursDark getColourDark() {
+        return colourDark;
+    }
 
     /** @return value of the card (number/action/wild) */
     public UnoModel.Values getValue() {
         return value;
+    }
+
+    public UnoModel.ValuesDark getValueDark() {
+        return valueDark;
     }
 
     /** Assigns a new colour (used when playing a wild). */
@@ -29,15 +43,31 @@ public class Card {
         this.colour = colour;
     }
 
+    public void setColourDark(UnoModel.ColoursDark colourDark) {
+        this.colourDark = colourDark;
+    }
+
     /**
      * @return image file name for this card (assumes resources in /images).
      * Wilds do not include colour in the file name.
      */
-    public String getFileName() {
-        if(value == UnoModel.Values.WILD || value == UnoModel.Values.WILD_DRAW_TWO) {
-            return "images/" + value + ".png";
+    public String getFileName(UnoModel.Side side) {
+
+        if(side == UnoModel.Side.LIGHT) {
+            if(value == UnoModel.Values.WILD || value == UnoModel.Values.WILD_DRAW_TWO) {
+                return "light_cards/" + value + ".png";
+            }
+            return "light_cards/" + colour.toString() + "_" + value.toString() + ".png";
         }
-        return "images/" + colour.toString() + "_" + value.toString() + ".png";
+
+        else if(side == UnoModel.Side.DARK) {
+            if(valueDark == UnoModel.ValuesDark.WILD) {
+                return "dark_cards/" + valueDark + ".png";
+            }
+            return "dark_cards/" + colourDark.toString() + "_" + valueDark.toString() + ".png";
+        }
+
+        return "";
     }
 
     /**
@@ -51,6 +81,6 @@ public class Card {
         if (!(o instanceof Card other)) {
             return false;
         }
-        return this.colour == other.colour && this.value == other.value;
+        return this.colour == other.colour && this.value == other.value && this.colourDark == other.colourDark && this.valueDark == other.valueDark;
     }
 }

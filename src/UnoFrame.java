@@ -203,6 +203,12 @@ public class UnoFrame implements UnoView {
         return colourSelected;
     }
 
+    public String colourSelectionDialogFlip() {
+        String[] colours = {"TEAL", "PURPLE", "PINK", "ORANGE"};
+        String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+        return colourSelected;
+    }
+
     /**
      * Opens a dialog to let the user choose an option once round is over
      * @return the chosen option (New Round, Quit) or null if cancelled
@@ -224,8 +230,8 @@ public class UnoFrame implements UnoView {
      * @param card the model card
      * @return a button containing the card image and correct action command
      */
-    public JButton cardButtons(Card card) {
-        JButton cardButton = new JButton(resizeImage(card.getFileName(), 150, 250));
+    public JButton cardButtons(Card card, UnoModel model) {
+        JButton cardButton = new JButton(resizeImage(card.getFileName(model.getSide()), 150, 250));
         cardButton.setPreferredSize(new Dimension(150, 250));
         cardButton.setMaximumSize(new Dimension(150, 250));
         cardButton.setMinimumSize(new Dimension(150, 250));
@@ -245,10 +251,10 @@ public class UnoFrame implements UnoView {
      * @param cards list of cards to display
      * @param controller the action listener for card clicks
      */
-    public void handPanelButtons(List<Card> cards, UnoController controller) {
+    public void handPanelButtons(List<Card> cards, UnoController controller, UnoModel model) {
         handPanel.removeAll();
         for(Card c: cards) {
-            JButton cardButton = cardButtons(c);
+            JButton cardButton = cardButtons(c,model);
             cardButton.addActionListener(controller);
             handPanel.add(cardButton);
             handPanel.add(Box.createRigidArea(new Dimension(10, 0)));
@@ -341,7 +347,7 @@ public class UnoFrame implements UnoView {
         Dimension topCardSize = getTopCardPanel().getSize();
         getTopCardLabel().setIcon(
                 resizeImage(
-                        model.getTopCard().getFileName(),
+                        model.getTopCard().getFileName(model.getSide()),
                         topCardSize.width - 180,
                         topCardSize.height - 250
                 )
@@ -359,7 +365,7 @@ public class UnoFrame implements UnoView {
      */
     @Override
     public void updateHandPanel(UnoModel model, UnoController controller) {
-        handPanelButtons(model.getCurrPlayer().getPersonalDeck(), controller);
+        handPanelButtons(model.getCurrPlayer().getPersonalDeck(), controller, model);
     }
 
     /**

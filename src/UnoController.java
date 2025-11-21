@@ -163,6 +163,14 @@ public class UnoController implements ActionListener {
                     return;
                 }
 
+                else if(cardPicked.getValueDark().equals(UnoModel.ValuesDark.FLIP) || cardPicked.getValue().equals(UnoModel.Values.FLIP) ) {
+                    model.flip();
+                    view.updateHandPanel(model, this);
+                    frame.disableCards();
+                    isAdvanced = false;
+                    view.updateStatusMessage("deck has been flipped");
+                }
+
                 // Regular card played
                 else {
                     view.updateHandPanel(model, this);
