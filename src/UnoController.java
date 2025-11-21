@@ -138,7 +138,7 @@ public class UnoController implements ActionListener {
                     return;
                 }
 
-                else if(cardPicked.getValue().equals(UnoModel.Values.WILD)) {
+                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD)) {
                     String colour = frame.colourSelectionDialog(); // Choose new colour
                     if(colour != null) {
                         model.wild(UnoModel.Colours.valueOf(colour));
@@ -149,7 +149,7 @@ public class UnoController implements ActionListener {
                     view.updateStatusMessage("New colour chosen, " + colour + ".");
                 }
 
-                else if(cardPicked.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
+                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
                     String colour = frame.colourSelectionDialog();
                     String nextPlayer = model.getNextPlayer().getName();
                     if(colour != null) {

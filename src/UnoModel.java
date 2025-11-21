@@ -279,14 +279,29 @@ public class UnoModel {
      * @return true if the card can be legally played now
      */
     public boolean isPlayable(Card card){
-        if(card.getValue() == Values.WILD || card.getValue() == Values. WILD_DRAW_TWO) { //wild cards can always be played
-            return true;
+
+        //wild cards can always be played
+        if(side == Side.LIGHT) {
+            if(card.getValue() == Values.WILD || card.getValue() == Values. WILD_DRAW_TWO) {
+                return true;
+            }
+        } else {
+            if(card.getValueDark() == ValuesDark.WILD) {
+                return true;
+            }
         }
 
-        boolean sameColour = topCard.getColour() != null && card.getColour() != null && card.getColour().equals(topCard.getColour());
-        boolean sameValue = card.getValue() == topCard.getValue();
+        if(side == Side.LIGHT) {
+            boolean sameColour = topCard.getColour() != null && card.getColour() != null && card.getColour().equals(topCard.getColour());
+            boolean sameValue = (card.getValue() == topCard.getValue());
+            return sameColour || sameValue;
+        }
 
-        return sameColour || sameValue;
+        else {
+            boolean sameColour = topCard.getColourDark() != null && card.getColourDark() != null && card.getColourDark().equals(topCard.getColourDark());
+            boolean sameValue = (card.getValueDark() == topCard.getValueDark());
+            return sameColour || sameValue;
+        }
     }
 
     /**
