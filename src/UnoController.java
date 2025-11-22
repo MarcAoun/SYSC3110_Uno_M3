@@ -72,21 +72,42 @@ public class UnoController implements ActionListener {
             if(!isAdvanced) {
                 model.advance();                         // Only advance if no card effect already advanced the turn
             }
-            //view.update(model);
             view.updateHandPanel(model, this);
-            frame.enableCards();
+
+            if(!model.isWildStackCard()) {
+                frame.enableCards();
+            } else {
+                frame.disableCardButtons();
+            }
+
+
 
         }
 
         // Handle Draw Card button
         if(e.getActionCommand().equals("Draw Card")) {
-            frame.getNextButton().setEnabled(true);
-            model.drawCard();                              // Draw card into player's hand
-            isAdvanced = false;
-            view.updateHandPanel(model, this);
-            frame.disableCards();                          // Disable cards until next turn
-            view.updateStatusMessage(model.getCurrPlayer().getName() + " draws a card.");
+            if(model.isWildStackCard()) {
+                frame.disableCardButtons();
 
+                boolean chosen = model.wildStack();
+                view.updateHandPanel(model, this);
+
+                if(chosen) {
+                    view.updateStatusMessage(model.getCurrPlayer().getName() + " drew the colour");
+                    isAdvanced = false;
+                } else {
+                    view.updateStatusMessage("Keep drawing");
+                }
+            }
+
+            else {
+                frame.getNextButton().setEnabled(true);
+                model.drawCard();                              // Draw card into player's hand
+                isAdvanced = false;
+                view.updateHandPanel(model, this);
+                frame.disableCards();                          // Disable cards until next turn
+                view.updateStatusMessage(model.getCurrPlayer().getName() + " draws a card.");
+            }
         }
 
         // Handle card selections
@@ -189,15 +210,17 @@ public class UnoController implements ActionListener {
 
                 }
 
-                else if(cardPicked.getValueDark().equals(UnoModel.ValuesDark.WILD)) {
+                else if(cardPicked.getValueDark().equals(UnoModel.ValuesDark.WILD_STACK)) {
                     String colour = frame.colourSelectionDialogDark(); // Choose new colour
                     if(colour != null) {
-                        model.wildDark(UnoModel.ColoursDark.valueOf(colour));
+                        model.setInitWildStack(UnoModel.ColoursDark.valueOf(colour));
                     }
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage("New colour chosen, " + colour + ".");
+                    String nextPlayer = model.getNextPlayer().getName();
+                    view.updateStatusMessage("New colour chosen, " + colour + ", " + nextPlayer +
+                            " keeps drawing cards until a " + colour + " card is chosen.");
                 }
 
                 // Regular card played

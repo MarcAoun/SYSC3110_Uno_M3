@@ -27,7 +27,7 @@ public class UnoModel {
     public enum Values {ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, DRAW_ONE, REVERSE, SKIP, WILD, WILD_DRAW_TWO, FLIP}
 
     /** Available card values for dark side. */
-    public enum ValuesDark {ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, FLIP, DRAW_FIVE, SKIP_ALL, WILD}
+    public enum ValuesDark {ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, FLIP, DRAW_FIVE, SKIP_ALL, WILD_STACK}
 
     /** What side the deck is being played on. */
     public enum Side {LIGHT, DARK};
@@ -53,6 +53,18 @@ public class UnoModel {
     //Holds the current side
     private Side side = Side.LIGHT;
 
+    private boolean initWildStack;
+
+    private boolean isWildStackCard = false;
+
+    private Player nextPlayer;
+
+    private ColoursDark newColour;
+
+
+
+
+
     /**
      * Generates a random card. In this milestone, there is no physical deck;
      * draws are random and infinite.
@@ -75,7 +87,7 @@ public class UnoModel {
         ValuesDark valueDark = valuesDark[rand.nextInt(valuesDark.length)];
 
         ColoursDark colourDark = null;
-        if(valueDark != ValuesDark.WILD) {
+        if(valueDark != ValuesDark.WILD_STACK) {
             ColoursDark[] coloursDark = ColoursDark.values();
             colourDark = coloursDark[rand.nextInt(coloursDark.length)];
         }
@@ -194,9 +206,37 @@ public class UnoModel {
         notifyViews();
     }
 
-    public void wildDark(ColoursDark newColour) {
+    public void setInitWildStack(ColoursDark newColour) {
         topCard.setColourDark(newColour);
+        isWildStackCard = true;
+        nextPlayer = getNextPlayer();
+        this.newColour = newColour;
+    }
+
+    public boolean wildStack() {
+        if(!isWildStackCard) {
+            return false;
+        }
+
+        Card drawnCard = getRandomCard();
+        nextPlayer.addCard(drawnCard);
         notifyViews();
+
+        if(drawnCard.getColourDark().equals(newColour)) {
+            isWildStackCard = false;
+            newColour = null;
+            nextPlayer = null;
+            advance();
+            notifyViews();
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean isWildStackCard() {
+        return isWildStackCard;
+
     }
 
     //------------------------------------------//
@@ -299,7 +339,7 @@ public class UnoModel {
                 return true;
             }
         } else {
-            if(card.getValueDark() == ValuesDark.WILD) {
+            if(card.getValueDark() == ValuesDark.WILD_STACK) {
                 return true;
             }
         }

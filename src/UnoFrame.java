@@ -316,6 +316,17 @@ public class UnoFrame implements UnoView {
         }
     }
 
+    public void disableCardButtons() {
+        drawButton.setEnabled(true);
+        nextButton.setEnabled(false);
+
+        for(Component comp: handPanel.getComponents()) {
+            if(comp instanceof JButton) {
+                comp.setEnabled(false);
+            }
+        }
+    }
+
     /**
      * Disables all interactable buttons (used when the game ends).
      */

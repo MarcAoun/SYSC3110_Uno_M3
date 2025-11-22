@@ -61,7 +61,7 @@ public class Card {
         }
 
         else if(side == UnoModel.Side.DARK) {
-            if(valueDark == UnoModel.ValuesDark.WILD) {
+            if(valueDark == UnoModel.ValuesDark.WILD_STACK) {
                 return "dark_cards/" + valueDark + ".png";
             }
             return "dark_cards/" + colourDark.toString() + "_" + valueDark.toString() + ".png";
