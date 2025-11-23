@@ -131,7 +131,7 @@ public class UnoFrame implements UnoView {
 
         frame.add(controlPanel, BorderLayout.EAST);
 
-        frame.setVisible (true);
+        frame.setVisible (false);
 
         // ----- Prompt Player Count -----
         String[] playerOptions = {"2", "3", "4"};
@@ -152,6 +152,10 @@ public class UnoFrame implements UnoView {
             }
             playerName.add(name);
         }
+
+
+        frame.setVisible(true);
+
 
         // ----- Setup Scoreboard for Actual Player Count -----
         scoreBoardPanel.removeAll();
