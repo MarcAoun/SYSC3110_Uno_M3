@@ -204,13 +204,29 @@ public class UnoFrame implements UnoView {
      */
     public String colourSelectionDialog() {
         String[] colours = {"RED", "YELLOW", "GREEN", "BLUE"};
-        String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+        String colourSelected = null;
+
+        while(colourSelected == null) {
+            colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+
+            if(colourSelected == null) {
+                JOptionPane.showMessageDialog(frame, "You must select a colour to continue");
+            }
+        }
         return colourSelected;
     }
 
     public String colourSelectionDialogDark() {
         String[] colours = {"TEAL", "PURPLE", "PINK", "ORANGE"};
-        String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+        String colourSelected = null;
+
+        while(colourSelected == null) {
+            colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+
+            if(colourSelected == null) {
+                JOptionPane.showMessageDialog(frame, "You must select a colour to continue");
+            }
+        }
         return colourSelected;
     }
 
