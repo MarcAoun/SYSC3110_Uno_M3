@@ -267,6 +267,7 @@ public class UnoModel {
             topCard = getRandomCard();
         }while (topCard.getValue() == Values.WILD || topCard.getValue() == Values.WILD_DRAW_TWO);
 
+        side = Side.LIGHT;
         currPlayerIndex = 0;
         direction = 1;
         notifyViews();
