@@ -1,7 +1,5 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import javax.swing.JOptionPane;
-
 
 /**
  * The UnoController connects the UnoModel, UnoView, and UnoFrame.
@@ -16,360 +14,341 @@ public class UnoController implements ActionListener {
     /** The view responsible for rendering the state of the game. */
     private final UnoView view;
 
-    /** The main game window containing UI components. */
+    /** The main game window with GUI components. */
     private final UnoFrame frame;
 
-    /** Flags indicating which players are AI-controlled. Indexed by player order. */
-    private boolean[] aiPlayers;
-
-    /** True while the controller is performing AI turns (prevents recursion). */
-    private boolean aiTurnInProgress;
-
-    /**
-     * Tracks whether the "Next Player" advance action has already been applied
-     * due to a card effect (e.g., Skip or Wild Draw Two). Prevents double-advancing.
-     */
+    /** Flag indicating if the current player's turn has already advanced. */
     private boolean isAdvanced;
 
-
     /**
-     * Constructs a controller with the provided model, view, and frame.
+     * Constructs the controller with references to the model, view, and frame.
      *
-     * @param model the game model
-     * @param view the user interface view for displaying the game
-     * @param frame the top-level game window and UI handler
+     * @param model game model containing the core logic
+     * @param view  view interface for displaying updates
+     * @param frame main application window
      */
     public UnoController(UnoModel model, UnoView view, UnoFrame frame) {
         this.model = model;
         this.view = view;
         this.frame = frame;
-
         isAdvanced = false;
-        aiPlayers = null;
-        aiTurnInProgress = false;
+    }
+
+    private UnoModel.Colours chooseColourForAI() {
+        Player p = model.getCurrPlayer();
+        int[] counts = new int[UnoModel.Colours.values().length];
+        for (Card c : p.getPersonalDeck()) {
+            UnoModel.Colours col = c.getColour();
+            if (col != null) {
+                counts[col.ordinal()]++;
+            }
+        }
+        int bestIndex = 0;
+        for (int i = 1; i < counts.length; i++) {
+            if (counts[i] > counts[bestIndex]) {
+                bestIndex = i;
+            }
+        }
+        return UnoModel.Colours.values()[bestIndex];
+    }
+
+    private UnoModel.ColoursDark chooseDarkColourForAI() {
+        Player p = model.getCurrPlayer();
+        int[] counts = new int[UnoModel.ColoursDark.values().length];
+        for (Card c : p.getPersonalDeck()) {
+            UnoModel.ColoursDark col = c.getColourDark();
+            if (col != null) {
+                counts[col.ordinal()]++;
+            }
+        }
+        int bestIndex = 0;
+        for (int i = 1; i < counts.length; i++) {
+            if (counts[i] > counts[bestIndex]) {
+                bestIndex = i;
+            }
+        }
+        return UnoModel.ColoursDark.values()[bestIndex];
     }
 
     /**
      * Starts the game by:
      * - Adding players from the frame
-     * - Initializing a new round
-     * - Updating the view and hand panel
-     * - Enabling card interaction
+     * - Dealing initial hands
+     * - Enabling the first player's actions
      */
     public void play() {
-        java.util.List<String> names = frame.getPlayerName();
-        aiPlayers = new boolean[names.size()];
-
-        for (int i = 0; i < names.size(); i++) {
-            String playerName = names.get(i);
-            int choice = JOptionPane.showConfirmDialog(
-                    null,
-                    "Should " + playerName + " be controlled by the computer (AI)?",
-                    "Player Type",
-                    JOptionPane.YES_NO_OPTION
-            );
-            aiPlayers[i] = (choice == JOptionPane.YES_OPTION);
-            model.addPlayer(playerName);
+        // Add players from the frame's setup
+        for (String player : frame.getPlayerName()) {
+            model.addPlayer(player);
         }
 
+        // Start a new round (deal cards, choose initial top card)
         model.newRound();
+
+        // Update the initial hand display and enable cards
         view.updateHandPanel(model, this);
         frame.enableCards();
-        triggerAITurnIfNeeded();
+
+        // Update initial status message
+        view.updateStatusMessage("Game started. It is " + model.getCurrPlayer().getName() + "'s turn.");
     }
 
-
     /**
-     * Handles all UI action events such as:
-     * - "Next Player" button
-     * - "Draw Card" button
-     * - Playing a selected card from the player's hand
+     * Handles button clicks and card selections:
+     * - "Next Player" button: advances to next player, checks round/match end.
+     * - "Draw Card" button: draws a new card for the current player.
+     * - Card buttons: attempts to play the selected card if legal, and applies card effects.
      *
-     * @param e the action event triggered by the UI
+     * @param e the action event triggered by user interaction
      */
+    @Override
     public void actionPerformed(ActionEvent e) {
 
-        // Handle Next Player button
-        if(e.getActionCommand().equals("Next Player")) {
-            if(!isAdvanced) {
-                model.advance();                         // Only advance if no card effect already advanced the turn
+        // Handle "Next Player" button presses
+        if (e.getActionCommand().equals("Next Player")) {
+            if (!isAdvanced) {
+                model.advance();
             }
-            view.updateHandPanel(model, this);
 
-            if(!model.isWildStackCard()) {
-                frame.enableCards();
+            // Round end: current player has no cards
+            if (model.isDeckEmpty()) {
+                Player winner = model.getCurrPlayer();
+                int score = model.getScore(winner);
+
+                view.updateStatusMessage("Round over: " + winner.getName() + " wins this round and gets " + score + " points.");
+                view.updateWinner(winner.getName(), score);
+
+                boolean matchOver = model.checkWinner(winner);
+
+                if (matchOver) {
+                    view.updateStatusMessage("Game over: " + winner.getName() + " wins the game, reaching 500 or more points.");
+                    frame.disableAllButtons();
+                    return;
+                }
+
+                String option = frame.newRoundSelectionDialog();
+                if (option == null || option.equals("Quit")) {
+                    System.exit(0);
+                } else {
+                    model.newRound();
+                    view.updateHandPanel(model, this);
+                    frame.enableCards();
+                    view.updateStatusMessage("New round started. It is " + model.getCurrPlayer().getName() + "'s turn.");
+                }
             } else {
-                frame.disableCardButtons();
+                view.updateHandPanel(model, this);
+                frame.enableCards();
+                isAdvanced = false;
+                view.updateStatusMessage("Turn passed to " + model.getCurrPlayer().getName() + ".");
             }
-
-            if (!aiTurnInProgress) {
-                triggerAITurnIfNeeded();
-            }
-
         }
 
-        // Handle Draw Card button
-        if(e.getActionCommand().equals("Draw Card")) {
-            if(model.isWildStackCard()) {
-                String drawPlayer = model.getCurrPlayer().getName();
-                boolean chosen = model.wildStack();
-
-                view.updateHandPanel(model, this);
-                frame.disableCardButtons();
-
-                if(chosen) {
-                    view.updateHandPanel(model, this);
-                    frame.disableCards();
-                    view.updateStatusMessage(drawPlayer + " drew the colour");
-                    isAdvanced = false;
-
-                } else {
-                    view.updateHandPanel(model, this);
-                    view.updateStatusMessage("Keep drawing");
+        // Handle "Draw Card" button presses
+        else if (e.getActionCommand().equals("Draw Card")) {
+            boolean canDraw = false;
+            for (Card card : model.getCurrPlayer().getPersonalDeck()) {
+                if (model.isPlayable(card)) {
+                    canDraw = true;
+                    break;
                 }
             }
 
-            else {
-                frame.getNextButton().setEnabled(true);
-                model.drawCard();                          // Draw card into player's hand
-                isAdvanced = false;
+            if (!canDraw) {
+                model.drawCard();
                 view.updateHandPanel(model, this);
-                frame.disableCards();                          // Disable cards until next turn
-                view.updateStatusMessage(model.getCurrPlayer().getName() + " draws a card.");
+                frame.disableCardButtons();
+                view.updateStatusMessage(model.getCurrPlayer().getName() + " draws one card.");
+                isAdvanced = false;
+            } else {
+                view.updateStatusMessage("You have a card that can be played. Please play it instead of drawing.");
             }
         }
 
-        // Handle card buttons
+        // Handle card selections
         else {
             Card cardPicked = null;
             String cmd;
 
             // Identify which card was clicked by matching command strings
-            for(Card card: model.getCurrPlayer().getPersonalDeck()) { //Find the card that was picked
-                if(card.getValue().equals(UnoModel.Values.WILD) || card.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)){
+            for (Card card : model.getCurrPlayer().getPersonalDeck()) { //Find the card that was picked
+                if (card.getValue().equals(UnoModel.Values.WILD) || card.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
                     cmd = card.getValue() + "_" + System.identityHashCode(card);        // Unique per instance
-                } else { cmd = card.getColour() + "_" + card.getValue();
+                } else {
+                    cmd = card.getColour() + "_" + card.getValue();
 
-                } if(cmd.equals(e.getActionCommand())) {
+                }
+                if (cmd.equals(e.getActionCommand())) {
                     cardPicked = card;
                     break;
                 }
             }
 
-            // If card is valid and playable
             if (cardPicked != null && model.isPlayable(cardPicked)) {
+                model.playCard(cardPicked);
 
-                model.playCard(cardPicked);                 // Apply card to discard pile
-
-                if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.DRAW_ONE)){
-                    model.drawOne();                         // Next player draws one
+                if (model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.DRAW_ONE)) {
+                    model.drawOne();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage(model.getNextPlayer().getName() + " draws a card");
+                    view.updateStatusMessage("Next player draws one card.");
                 }
 
-                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.REVERSE)) {
-                    model.reverse();                           // Reverse turn order
+                else if (model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.REVERSE)) {
+                    model.reverse();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage(model.getCurrPlayer().getName() + " has reversed the order");
+                    view.updateStatusMessage("Play direction reversed.");
                 }
 
-                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.SKIP)) {
-                    String nextPlayer = model.getNextPlayer().getName();
-                    model.skip();                               // Skip next player's turn
+                else if (model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.SKIP)) {
+                    Player skippedPlayer = model.getNextPlayer();
+                    model.skip();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
-                    isAdvanced = true;                           // Skip already advances turn logic
-                    view.updateStatusMessage("Skip card has been played, " + nextPlayer + " skips their turn.");
-                    return;
+                    isAdvanced = true;
+                    view.updateStatusMessage(skippedPlayer.getName() + " is skipped. Turn passes to " +
+                            model.getCurrPlayer().getName() + ".");
                 }
 
-                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD)) {
-                    String colour = frame.colourSelectionDialog(); // Choose new colour
-                    if(colour != null) {
-                        model.wild(UnoModel.Colours.valueOf(colour));
+                else if (model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD)) {
+                    String colour;
+                    if (model.getCurrPlayer().isAI()) {
+                        UnoModel.Colours chosen = chooseColourForAI();
+                        model.wild(chosen);
+                        colour = chosen.toString();
+                    } else {
+                        colour = frame.colourSelectionDialog();
+                        if (colour != null) {
+                            model.wild(UnoModel.Colours.valueOf(colour));
+                        }
                     }
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage("New colour chosen, " + colour + ".");
+                    if (colour != null) {
+                        view.updateStatusMessage("New colour chosen, " + colour + ".");
+                    } else {
+                        view.updateStatusMessage("Wild colour chosen by AI.");
+                    }
                 }
 
-                else if(model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
-                    String colour = frame.colourSelectionDialog();
+                else if (model.getSide() == UnoModel.Side.LIGHT && cardPicked.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
+                    String colour;
                     String nextPlayer = model.getNextPlayer().getName();
-                    if(colour != null) {
-                        model.wildDrawTwo(UnoModel.Colours.valueOf(colour));    // Next player draws 2 + skip
+                    if (model.getCurrPlayer().isAI()) {
+                        UnoModel.Colours chosen = chooseColourForAI();
+                        model.wildDrawTwo(chosen);
+                        colour = chosen.toString();
+                    } else {
+                        colour = frame.colourSelectionDialog();
+                        if (colour != null) {
+                            model.wildDrawTwo(UnoModel.Colours.valueOf(colour));    // Next player draws 2 + skip
+                        }
                     }
 
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = true;                                          // Turn skip already applied
-                    view.updateStatusMessage("New colour chosen, " + colour + ", " + nextPlayer + " draws two cards and skips their turn.");
+                    if (colour != null) {
+                        view.updateStatusMessage("New colour chosen, " + colour + ", " + nextPlayer + " draws two cards and skips their turn.");
+                    } else {
+                        view.updateStatusMessage(nextPlayer + " draws two cards and skips their turn.");
+                    }
                     return;
                 }
 
-                else if((model.getSide() == UnoModel.Side.DARK && (cardPicked.getValueDark().equals(UnoModel.ValuesDark.FLIP))) ||
-                        (model.getSide() == UnoModel.Side.LIGHT && (cardPicked.getValue().equals(UnoModel.Values.FLIP)))) {
-                    model.flip();
-                    view.updateHandPanel(model, this);
-                    frame.disableCards();
-                    isAdvanced = false;
-                    view.updateStatusMessage("deck has been flipped");
-                }
-
-                else if(model.getSide() == UnoModel.Side.DARK && cardPicked.getValueDark().equals(UnoModel.ValuesDark.DRAW_FIVE)) {
+                else if (cardPicked.getValueDark().equals(UnoModel.ValuesDark.DRAW_FIVE)) {
                     model.drawFive();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = true;
                     String nextPlayer = model.getNextPlayer().getName();
-                    view.updateStatusMessage("Draw five played and " + nextPlayer + " picks up 5 cards and skips their turn.");
+                    view.updateStatusMessage(nextPlayer + " draws 5 cards and loses their turn.");
+                    return;
                 }
 
-                else if(model.getSide() == UnoModel.Side.DARK && cardPicked.getValueDark().equals(UnoModel.ValuesDark.SKIP_ALL)) {
+                else if (cardPicked.getValueDark().equals(UnoModel.ValuesDark.SKIP_ALL)) {
                     model.skipAll();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
-                    isAdvanced = true;
-                    view.updateStatusMessage("Everyone's turn is skipped, " + model.getCurrPlayer().getName() + " plays again." );
-
+                    isAdvanced = false;
+                    view.updateStatusMessage("All players skipped. Turn returns to " + model.getCurrPlayer().getName() + ".");
                 }
 
-                else if(model.getSide() == UnoModel.Side.DARK && cardPicked.getValueDark().equals(UnoModel.ValuesDark.WILD_STACK)) {
-                    String colour = frame.colourSelectionDialogDark(); // Choose new colour
-                    if(colour != null) {
-                        model.setInitWildStack(UnoModel.ColoursDark.valueOf(colour));
+                else if (cardPicked.getValueDark().equals(UnoModel.ValuesDark.WILD_STACK)) {
+                    String colour;
+                    if (model.getCurrPlayer().isAI()) {
+                        UnoModel.ColoursDark chosen = chooseDarkColourForAI();
+                        model.setInitWildStack(chosen);
+                        colour = chosen.toString();
+                    } else {
+                        colour = frame.colourSelectionDialogDark(); // Choose new colour
+                        if (colour != null) {
+                            model.setInitWildStack(UnoModel.ColoursDark.valueOf(colour));
+                        }
                     }
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
                     String nextPlayer = model.getNextPlayer().getName();
-                    view.updateStatusMessage("New colour chosen, " + colour + ", " + nextPlayer +
-                            " keeps drawing cards until a " + colour + " card is chosen.");
+                    if (colour != null) {
+                        view.updateStatusMessage("New colour chosen, " + colour + ", " + nextPlayer +
+                                " keeps drawing cards until a " + colour + " card is chosen.");
+                    } else {
+                        view.updateStatusMessage(nextPlayer +
+                                " keeps drawing cards until the chosen colour is drawn.");
+                    }
                 }
 
-                // Regular card played
-                else if (model.getSide() == UnoModel.Side.LIGHT){
+                else if (cardPicked.getValueDark().equals(UnoModel.ValuesDark.FLIP) || cardPicked.getValue().equals(UnoModel.Values.FLIP)) {
+                    model.flip();
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage(model.getCurrPlayer().getName() + " played a card");
+                    view.updateStatusMessage("Deck flipped to " + model.getSide() + " side.");
                 }
 
-                else if(model.getSide() == UnoModel.Side.DARK) {
+                else {
                     view.updateHandPanel(model, this);
                     frame.disableCards();
                     isAdvanced = false;
-                    view.updateStatusMessage(model.getCurrPlayer().getName() + " played a card");
+                    view.updateStatusMessage(model.getCurrPlayer().getName() + " played a card.");
                 }
 
-                // Check win condition
-                if(model.isDeckEmpty()) {
+                // Check if the current player has emptied their hand after playing
+                if (model.isDeckEmpty()) {
                     Player winner = model.getCurrPlayer();
                     int score = model.getScore(winner);
 
-                    //If overall winner
-                    if(model.checkWinner(winner)) {
-                        view.updateWinner(winner.getName(), score);
-                        view.updateStatusMessage(winner.getName() + " is the Winner of the Game");
-                        frame.disableAllButtons();
-                    }
+                    view.updateStatusMessage("Round over: " + winner.getName() + " wins this round and gets " + score + " points.");
+                    view.updateWinner(winner.getName(), score);
 
-                    // If round winner
-                    else {
-                        view.updateStatusMessage(winner.getName() +  " is the Winner of the Round, with " + score + " points.");
+                    boolean matchOver = model.checkWinner(winner);
+
+                    if (matchOver) {
+                        view.updateStatusMessage("Game over: " + winner.getName() + " wins the game, reaching 500 or more points.");
+                        frame.disableAllButtons();
+                        return;
+                    } else {
                         String option = frame.newRoundSelectionDialog();
-                        if(option != null && option.equals("New Round")) {
+                        if (option == null || option.equals("Quit")) {
+                            System.exit(0);
+                        } else {
                             model.newRound();
                             view.updateHandPanel(model, this);
                             frame.enableCards();
-                            view.updateWinner(winner.getName(), score);
-                            return;
-
+                            isAdvanced = false;
+                            view.updateStatusMessage("New round started. It is " + model.getCurrPlayer().getName() + "'s turn.");
                         }
-                        if(option != null && option.equals("Quit")) {
-                            System.exit(0);
-                            view.updateWinner(winner.getName(), score);
-                            return;
-                        }
-
-
                     }
                 }
             }
             // Invalid move feedback
-            if(cardPicked != null && !model.isPlayable(cardPicked)){
+            if (cardPicked != null && !model.isPlayable(cardPicked)) {
                 view.updateStatusMessage("Placing that card is not a valid move. Try again.");
             }
         }
     }
-
-    private boolean isCurrentPlayerAI() {
-        if (aiPlayers == null) {
-            return false;
-        }
-        String currentName = model.getCurrPlayer().getName();
-        java.util.List<String> names = frame.getPlayerName();
-        for (int i = 0; i < names.size(); i++) {
-            if (names.get(i).equals(currentName)) {
-                return aiPlayers[i];
-            }
-        }
-        return false;
-    }
-
-    private void triggerAITurnIfNeeded() {
-        if (aiPlayers == null) {
-            return;
-        }
-        if (!isCurrentPlayerAI()) {
-            return;
-        }
-
-        aiTurnInProgress = true;
-        try {
-            performAITurns();
-        } finally {
-            aiTurnInProgress = false;
-        }
-    }
-
-    private void performAITurns() {
-        while (isCurrentPlayerAI() && !model.isDeckEmpty()) {
-            Card chosen = null;
-            for (Card c : model.getCurrPlayer().getPersonalDeck()) {
-                if (model.isPlayable(c)) {
-                    chosen = c;
-                    break;
-                }
-            }
-
-            if (chosen != null) {
-                String cmd;
-                if (chosen.getValue().equals(UnoModel.Values.WILD) ||
-                        chosen.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
-                    cmd = chosen.getValue() + "_" + System.identityHashCode(chosen);
-                } else {
-                    cmd = chosen.getColour() + "_" + chosen.getValue();
-                }
-                ActionEvent cardEvent = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, cmd);
-                actionPerformed(cardEvent);
-            } else {
-                ActionEvent drawEvent = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Draw Card");
-                actionPerformed(drawEvent);
-            }
-
-            if (model.isDeckEmpty()) {
-                break;
-            }
-
-            ActionEvent nextEvent = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Next Player");
-            actionPerformed(nextEvent);
-        }
-    }
-
 }
