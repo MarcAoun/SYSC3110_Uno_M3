@@ -1,5 +1,6 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 /**
  * The UnoController connects the UnoModel, UnoView, and UnoFrame.
@@ -78,8 +79,13 @@ public class UnoController implements ActionListener {
      */
     public void play() {
         // Add players from the frame's setup
-        for (String player : frame.getPlayerName()) {
-            model.addPlayer(player);
+        List<Boolean> aiPlayers = frame.getAiPlayers();
+        List<String> playerNames = frame.getPlayerName();
+
+        for (int i = 0; i < playerNames.size(); i++) {
+            String player = playerNames.get(i);
+            boolean isAI = aiPlayers.get(i);
+            model.addPlayer(player, isAI);
         }
 
         // Start a new round (deal cards, choose initial top card)
