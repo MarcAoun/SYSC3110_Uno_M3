@@ -27,6 +27,14 @@ public class UnoController implements ActionListener {
     /** Holds the last status message from an AI action so it can be shown alongside turn handoff text. */
     private String pendingAIStatusMessage;
 
+    private void updateStatusWithPending(String status) {
+        if (pendingAIStatusMessage != null && handlingAITurn) {
+            status = pendingAIStatusMessage + " " + status;
+            pendingAIStatusMessage = null;
+        }
+        view.updateStatusMessage(status);
+    }
+
     /**
      * Constructs the controller with references to the model, view, and frame.
      *
@@ -51,39 +59,37 @@ public class UnoController implements ActionListener {
     }
 
     private UnoModel.Colours chooseColourForAI() {
-        Player p = model.getCurrPlayer();
+        Player player = model.getCurrPlayer();
         int[] counts = new int[UnoModel.Colours.values().length];
-        for (Card c : p.getPersonalDeck()) {
-            UnoModel.Colours col = c.getColour();
-            if (col != null) {
-                counts[col.ordinal()]++;
+        for (Card card : player.getPersonalDeck()) {
+            UnoModel.Colours colour = card.getColour();
+            if (colour != null) {
+                counts[colour.ordinal()]++;
             }
         }
-        int bestIndex = 0;
-        for (int i = 1; i < counts.length; i++) {
-            if (counts[i] > counts[bestIndex]) {
-                bestIndex = i;
-            }
-        }
-        return UnoModel.Colours.values()[bestIndex];
+        return UnoModel.Colours.values()[indexOfMax(counts)];
     }
 
     private UnoModel.ColoursDark chooseDarkColourForAI() {
-        Player p = model.getCurrPlayer();
+        Player player = model.getCurrPlayer();
         int[] counts = new int[UnoModel.ColoursDark.values().length];
-        for (Card c : p.getPersonalDeck()) {
-            UnoModel.ColoursDark col = c.getColourDark();
-            if (col != null) {
-                counts[col.ordinal()]++;
+        for (Card card : player.getPersonalDeck()) {
+            UnoModel.ColoursDark colour = card.getColourDark();
+            if (colour != null) {
+                counts[colour.ordinal()]++;
             }
         }
+        return UnoModel.ColoursDark.values()[indexOfMax(counts)];
+    }
+
+    private int indexOfMax(int[] values) {
         int bestIndex = 0;
-        for (int i = 1; i < counts.length; i++) {
-            if (counts[i] > counts[bestIndex]) {
+        for (int i = 1; i < values.length; i++) {
+            if (values[i] > values[bestIndex]) {
                 bestIndex = i;
             }
         }
-        return UnoModel.ColoursDark.values()[bestIndex];
+        return bestIndex;
     }
 
     /**
@@ -163,12 +169,7 @@ public class UnoController implements ActionListener {
                 view.updateHandPanel(model, this);
                 frame.enableCards();
                 isAdvanced = false;
-                String status = "Turn passed to " + model.getCurrPlayer().getName() + ".";
-                if (pendingAIStatusMessage != null && handlingAITurn) {
-                    status = pendingAIStatusMessage + " " + status;
-                    pendingAIStatusMessage = null;
-                }
-                view.updateStatusMessage(status);
+                updateStatusWithPending("Turn passed to " + model.getCurrPlayer().getName() + ".");
             }
 
             maybeRunAITurn();
