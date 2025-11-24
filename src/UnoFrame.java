@@ -50,7 +50,7 @@ public class UnoFrame implements UnoView {
     /** List of player names obtained during game setup. */
     private java.util.List<String> playerName;
 
-    /** Parallel list indicating which players are AI (true = AI, false = human). */
+    /** Parallel list indicating whether each player is an AI (true) or human (false). */
     private java.util.List<Boolean> aiPlayers;
 
     /**
@@ -136,32 +136,49 @@ public class UnoFrame implements UnoView {
 
         // ----- Prompt Player Count -----
         String[] playerOptions = {"2", "3", "4"};
-        String playerCount = (String) JOptionPane.showInputDialog(frame, "Select Number of Players:", "Player Setup", JOptionPane.QUESTION_MESSAGE, null, playerOptions, playerOptions[0]);
+        String playerCount = (String) JOptionPane.showInputDialog(
+                frame,
+                "Select Number of Players:",
+                "Player Setup",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                playerOptions,
+                playerOptions[0]
+        );
 
         // If canceled, exit
         if (playerCount == null){
             System.exit(0);
         }
 
-        // ----- Prompt Player Names -----
+        // ----- Prompt Player Names + AI/Human -----
         int count = Integer.parseInt(playerCount);
         playerName = new ArrayList<>();
         aiPlayers = new ArrayList<>();
         for (int i = 1; i <= count; i++){
-            String name = JOptionPane.showInputDialog(frame, "Enter name for Player "+ i + ":", "Player Setup", JOptionPane.QUESTION_MESSAGE);
+            String name = JOptionPane.showInputDialog(
+                    frame,
+                    "Enter name for Player "+ i + ":",
+                    "Player Setup",
+                    JOptionPane.QUESTION_MESSAGE
+            );
             if (name == null || name.trim().isEmpty()){
                 name = "Player" + i;
             }
             playerName.add(name);
 
-            int choice = JOptionPane.showConfirmDialog(
+            Object[] typeOptions = {"Human", "AI"};
+            int choice = JOptionPane.showOptionDialog(
                     frame,
-                    "Should " + name + " be an AI player?",
+                    "Is " + name + " a Human or AI player?",
                     "Player Type",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    typeOptions,
+                    typeOptions[0]
             );
-            boolean isAI = (choice == JOptionPane.YES_OPTION);
+            boolean isAI = (choice == 1); // 0 = Human, 1 = AI, anything else defaults to Human
             aiPlayers.add(isAI);
         }
 
@@ -213,13 +230,29 @@ public class UnoFrame implements UnoView {
      */
     public String colourSelectionDialog() {
         String[] colours = {"RED", "YELLOW", "GREEN", "BLUE"};
-        String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+        String colourSelected = (String) JOptionPane.showInputDialog(
+                frame,
+                "Choose new colour for Wild Card:",
+                "Wild Card Colour",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                colours,
+                colours[0]
+        );
         return colourSelected;
     }
 
     public String colourSelectionDialogDark() {
         String[] colours = {"TEAL", "PURPLE", "PINK", "ORANGE"};
-        String colourSelected = (String) JOptionPane.showInputDialog(frame, "Choose new colour for Wild Card:", "Wild Card Colour", JOptionPane.PLAIN_MESSAGE, null, colours, colours[0]);
+        String colourSelected = (String) JOptionPane.showInputDialog(
+                frame,
+                "Choose new colour for Wild Card:",
+                "Wild Card Colour",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                colours,
+                colours[0]
+        );
         return colourSelected;
     }
 
@@ -229,18 +262,25 @@ public class UnoFrame implements UnoView {
      */
     public String newRoundSelectionDialog() {
         String[] options = {"New Round", "Quit"};
-        String optionSelected = (String) JOptionPane.showInputDialog(frame, "New Round to Continue playing or Quit", "Round Over", JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+        String optionSelected = (String) JOptionPane.showInputDialog(
+                frame,
+                "New Round to Continue playing or Quit",
+                "Round Over",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
         return optionSelected;
     }
-
 
     /** @return list of player names entered during setup. */
     public List<String> getPlayerName() {
         return playerName;
     }
 
-    /** @return parallel list of which players are AI. */
-    public List<Boolean> getAIPlayers() {
+    /** @return list of AI flags aligned with getPlayerName(): true = AI, false = Human. */
+    public List<Boolean> getAiPlayers() {
         return aiPlayers;
     }
 
@@ -428,8 +468,6 @@ public class UnoFrame implements UnoView {
             }
         }
     }
-
-
 
     /**
      * Main method to launch the standalone UNO game window.
