@@ -390,10 +390,19 @@ public class UnoModel {
     /**
      * Adds a new player by name and initializes their cumulative score to 0.
      * @param playerName display name
+     * @param isAI whether the player is computer-controlled
+     */
+    public void addPlayer(String playerName, boolean isAI) {
+        players.add(new Player(playerName, isAI));
+        finalScores.put(playerName, 0);
+    }
+
+    /**
+     * Convenience overload for adding a human player.
+     * @param playerName display name
      */
     public void addPlayer(String playerName) {
-        players.add(new Player(playerName));
-        finalScores.put(playerName, 0);
+        addPlayer(playerName, false);
     }
 
     /** @return current player object */

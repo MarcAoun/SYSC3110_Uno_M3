@@ -1,5 +1,6 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 /**
  * The UnoController connects the UnoModel, UnoView, and UnoFrame.
@@ -20,6 +21,9 @@ public class UnoController implements ActionListener {
     /** Flag indicating if the current player's turn has already advanced. */
     private boolean isAdvanced;
 
+    /** Guard flag to avoid recursively entering the AI turn loop. */
+    private boolean handlingAITurn;
+
     /**
      * Constructs the controller with references to the model, view, and frame.
      *
@@ -32,6 +36,14 @@ public class UnoController implements ActionListener {
         this.view = view;
         this.frame = frame;
         isAdvanced = false;
+        handlingAITurn = false;
+    }
+
+    private String buildActionCommand(Card card) {
+        if (card.getValue().equals(UnoModel.Values.WILD) || card.getValue().equals(UnoModel.Values.WILD_DRAW_TWO)) {
+            return card.getValue() + "_" + System.identityHashCode(card);
+        }
+        return card.getColour() + "_" + card.getValue();
     }
 
     private UnoModel.Colours chooseColourForAI() {
@@ -78,8 +90,13 @@ public class UnoController implements ActionListener {
      */
     public void play() {
         // Add players from the frame's setup
-        for (String player : frame.getPlayerName()) {
-            model.addPlayer(player);
+        List<Boolean> aiPlayers = frame.getAiPlayers();
+        List<String> playerNames = frame.getPlayerName();
+
+        for (int i = 0; i < playerNames.size(); i++) {
+            String player = playerNames.get(i);
+            boolean isAI = aiPlayers.get(i);
+            model.addPlayer(player, isAI);
         }
 
         // Start a new round (deal cards, choose initial top card)
@@ -91,6 +108,8 @@ public class UnoController implements ActionListener {
 
         // Update initial status message
         view.updateStatusMessage("Game started. It is " + model.getCurrPlayer().getName() + "'s turn.");
+
+        maybeRunAITurn();
     }
 
     /**
@@ -134,6 +153,7 @@ public class UnoController implements ActionListener {
                     view.updateHandPanel(model, this);
                     frame.enableCards();
                     view.updateStatusMessage("New round started. It is " + model.getCurrPlayer().getName() + "'s turn.");
+                    maybeRunAITurn();
                 }
             } else {
                 view.updateHandPanel(model, this);
@@ -141,6 +161,8 @@ public class UnoController implements ActionListener {
                 isAdvanced = false;
                 view.updateStatusMessage("Turn passed to " + model.getCurrPlayer().getName() + ".");
             }
+
+            maybeRunAITurn();
         }
 
         // Handle "Draw Card" button presses
@@ -256,6 +278,7 @@ public class UnoController implements ActionListener {
                     } else {
                         view.updateStatusMessage(nextPlayer + " draws two cards and skips their turn.");
                     }
+                    maybeRunAITurn();
                     return;
                 }
 
@@ -266,6 +289,7 @@ public class UnoController implements ActionListener {
                     isAdvanced = true;
                     String nextPlayer = model.getNextPlayer().getName();
                     view.updateStatusMessage(nextPlayer + " draws 5 cards and loses their turn.");
+                    maybeRunAITurn();
                     return;
                 }
 
@@ -341,6 +365,7 @@ public class UnoController implements ActionListener {
                             frame.enableCards();
                             isAdvanced = false;
                             view.updateStatusMessage("New round started. It is " + model.getCurrPlayer().getName() + "'s turn.");
+                            maybeRunAITurn();
                         }
                     }
                 }
@@ -349,6 +374,32 @@ public class UnoController implements ActionListener {
             if (cardPicked != null && !model.isPlayable(cardPicked)) {
                 view.updateStatusMessage("Placing that card is not a valid move. Try again.");
             }
+        }
+    }
+
+    private void maybeRunAITurn() {
+        if (handlingAITurn) {
+            return;
+        }
+
+        handlingAITurn = true;
+        try {
+            while (model.getCurrPlayer().isAI()) {
+                frame.disableAllButtons();
+                view.updateStatusMessage(model.getCurrPlayer().getName() + " (AI) is playing.");
+
+                Card aiChoice = model.chooseAICardForCurrPlayer();
+
+                if (aiChoice != null) {
+                    actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, buildActionCommand(aiChoice)));
+                } else {
+                    actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Draw Card"));
+                }
+
+                actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Next Player"));
+            }
+        } finally {
+            handlingAITurn = false;
         }
     }
 }
